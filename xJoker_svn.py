@@ -28,7 +28,7 @@ def __virtual__():
                 'This modules only run Windows system.')
 
 
-def _run_svn(cmd, cwd,runasUsername,runasPassword,username, password,certCheck,revision, opts):
+def _run_svn(cmd, cwd,runasUsername,runasPassword,username, password,certCheck,revision='', opts=''):
     '''
         Execute svn command
 
@@ -110,6 +110,8 @@ def checkout(cwd,
     opts += (remote,)
     if target:
         opts += (target,)
+    if not os.path.exists(cwd):
+        os.mkdir(cwd)
     return _run_svn('checkout', cwd, runasUsername, runasPassword,username, password,certCheck,revision,opts)
 
 def info(cwd,
