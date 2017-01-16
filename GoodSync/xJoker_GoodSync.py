@@ -7,6 +7,9 @@ import logging
 import os
 import subprocess
 
+# 用于读取用户SID而导入的库
+import win32security
+
 import salt.utils
 from salt import utils, exceptions
 
@@ -14,7 +17,7 @@ from salt import utils, exceptions
 __virtualname__ = 'xjoker_goodsync'
 _LOG = logging.getLogger(__name__)
 _Gsync_path="C:\\Program Files\\Siber Systems\\GoodSync\\gsync.exe"
-
+_GoodSyncLang=""
 # D:\Sync\GoodSync\GoodSync.exe
 
 def __virtual__():
@@ -27,7 +30,8 @@ def __virtual__():
         return False, "This modules only run Windows system."
 
 
-def _run_cmd(cmd):
+def _run_cmd(cmd,RunasUsername):
+    c = _SetGoodSyncLanguageToEnglish(RunasUsername)
     base_cmd=[_Gsync_path]
     for i in cmd:
         _LOG.info(i)
@@ -37,14 +41,39 @@ def _run_cmd(cmd):
     p = subprocess.Popen(base_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     stdout, stderr = p.communicate()
     if p.returncode==0:
+        _SetGoodSyncLanguageToDefault(RunasUsername,c)
         return stdout
 
+    _SetGoodSyncLanguageToDefault(RunasUsername,c)
     raise exceptions.CommandExecutionError(stdout+ '\n\n')
 
 def sayhi():
     return "Hi xJoker."
 
-def jobnew(jobname,
+# 用于获取Windows用户对应的SID
+def _getUserSID(username):
+    try:
+        sid = win32security.LookupAccountName(None, username)[0]
+        sidstr = win32security.ConvertSidToStringSid(sid)
+        return sidstr
+    except:
+        return None
+
+# 获取注册表原始键值
+def _GetGoodSyncLanguage(username):
+    b=salt.modules.reg.read_value("HKEY_USERS",_getUserSID(username)+'\Software\Siber Systems\GoodSync','LocalizationFile')
+    return b["vdata"]
+
+
+def _SetGoodSyncLanguageToEnglish(username):
+    salt.modules.reg.set_value("HKEY_USERS",_getUserSID(username)+'\Software\Siber Systems\GoodSync','LocalizationFile','en-english.rfi')
+
+def _SetGoodSyncLanguageToDefault(username,b):
+    salt.modules.reg.set_value("HKEY_USERS",_getUserSID(username)+'\Software\Siber Systems\GoodSync','LocalizationFile',b)
+
+
+def jobnew(RunasUsername,
+           jobname,
            f1,
            f2,
            ReadOnlySource=0,
@@ -61,12 +90,14 @@ def jobnew(jobname,
            TimerIntervalMinutes=10,
            AutoResolveConflicts=1,
            DetectMovesAndRenames=0,
-           UberUnlockedUpload=0):
+           UberUnlockedUpload=0,
+           Option=0):
     '''
 
-    Example :  xjoker_goodsync.jobnew jobname="233" f1="c:\\f1" f2="c:\\f2"
+    Example :  xjoker_goodsync.jobnew Administrator jobname="233" f1="c:\\f1" f2="c:\\f2"
 
-               xjoker_goodsync.jobnew jobname="233" f1="c:\\f1" f2="c:\\f2" ReadOnlySource=0 exclude="*./svn|*.233|*.666" OnFileChangeAction=1 OnTimerAction=1 DetectMovesAndRenames=0
+               xjoker_goodsync.jobnew Administrator jobname="233" f1="c:\\f1" f2="c:\\f2" ReadOnlySource=0 exclude="*./svn|*.233|*.666" OnFileChangeAction=1 OnTimerAction=1 DetectMovesAndRenames=0
+    :param RunasUsername: Specifies the account name run Goodsync
     :param jobname: job name
     :param f1: Left sync folder
     :param f2: Right sync folder
@@ -85,6 +116,7 @@ def jobnew(jobname,
     :param AutoResolveConflicts: Auto-Resolve conflicts option. no=0 left=1 right=2 newer=3 Default=1
     :param DetectMovesAndRenames: Detect File/Folder Moves and Renames,instead of doing Copy + Delete. yes=0 no=1 Default=1
     :param UberUnlockedUpload: yes=0 no=1 Default=0
+    :param Option: analyze=0 sync=1 makecurr=2 Default=0
     :return:
     '''
 
@@ -97,6 +129,7 @@ def jobnew(jobname,
     OnTimerAction_List=['analyze','sync','no']
     AutoResolveConflicts_List=['no','left','right','newer']
     UberUnlockedUpload_List=['yes','no']
+    Option_List=['/analyze','/sync','/makecurr']
 
 
 
@@ -158,41 +191,64 @@ def jobnew(jobname,
     if UberUnlockedUpload==0 or UberUnlockedUpload==1:
         cmd.extend(['/uber-unlocked={0}'.format(UberUnlockedUpload_List[UberUnlockedUpload])])
 
-    return _run_cmd(cmd)
+    if Option>=0 or Option<=2:
+        cmd.extend([Option_List[Option]])
 
-def joblist():
+    return _run_cmd(cmd,RunasUsername)
+
+def joblist(RunasUsername):
     '''
      List all job
-     Example: salt '*' xjoker_goodsync.joblist
+     Example: salt '*' xjoker_goodsync.joblist Administrator
     :return:
     '''
     cmd=['job-list']
-    return _run_cmd(cmd)
+    return _run_cmd(cmd,RunasUsername)
 
-def jobdelete(jobname):
+def jobdelete(RunasUsername,jobname):
     '''
     Delete existing job.
-    Example: salt '*' xjoker_goodsync.jobdelete jobName
+    Example: salt '*' xjoker_goodsync.jobdelete Administrator jobName
     :param jobname: job name
     :return:
     '''
     if jobname == None:
         return "Jobname is null."
     cmd=['job-delete',str(jobname)]
-    return _run_cmd(cmd)
+    return _run_cmd(cmd,RunasUsername)
 
-def jobanalyzeall():
+def jobanalyzeall(RunasUsername):
     '''
     Analyze all jobs
+    Example: salt '*' xjoker_goodsync.jobanalyzeall Administrator
     :return:
     '''
     cmd=['analyze','/all']
-    return _run_cmd(cmd)
+    return _run_cmd(cmd,RunasUsername)
 
-def jobsyncall():
+def jobanalyze(RunasUsername,jobname):
+    '''
+    Analyze specified jobs
+    Example: salt '*' xjoker_goodsync.jobanalyze Administrator jobName
+    :return:
+    '''
+    cmd=['analyze',jobname]
+    return _run_cmd(cmd,RunasUsername)
+
+def jobsyncall(RunasUsername):
     '''
     Synchronize all jobs
+    Example: salt '*' xjoker_goodsync.jobsyncall Administrator
     :return:
     '''
     cmd=['sync','/all']
-    return _run_cmd(cmd)
+    return _run_cmd(cmd,RunasUsername)
+
+def jobsync(RunasUsername,jobName):
+    '''
+    Synchronize specified jobs
+    Example: salt '*' xjoker_goodsync.jobsync Administrator jobName
+    :return:
+    '''
+    cmd=['sync',jobName]
+    return _run_cmd(cmd,RunasUsername)
