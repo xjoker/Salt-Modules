@@ -16,7 +16,7 @@ from salt import utils, exceptions
 
 __virtualname__ = 'xjoker_goodsync'
 _LOG = logging.getLogger(__name__)
-_Gsync_path="C:\\Program Files\\Siber Systems\\GoodSync\\gsync.exe"
+_Gsync_path="D:\\Sync\\GoodSync\\GoodSync.exe"
 _GoodSyncLang=""
 # D:\Sync\GoodSync\GoodSync.exe
 
@@ -61,15 +61,15 @@ def _getUserSID(username):
 
 # 获取注册表原始键值
 def _GetGoodSyncLanguage(username):
-    b=salt.modules.reg.read_value("HKEY_USERS",_getUserSID(username)+'\Software\Siber Systems\GoodSync','LocalizationFile')
+    b=salt.modules.reg.read_value("HKEY_USERS",_getUserSID(username)+"\Software\Siber Systems\GoodSync","LocalizationFile")
     return b["vdata"]
 
 
 def _SetGoodSyncLanguageToEnglish(username):
-    salt.modules.reg.set_value("HKEY_USERS",_getUserSID(username)+'\Software\Siber Systems\GoodSync','LocalizationFile','en-english.rfi')
+    salt.modules.reg.set_value("HKEY_USERS",_getUserSID(username)+"\Software\Siber Systems\GoodSync","LocalizationFile","en-english.rfi")
 
 def _SetGoodSyncLanguageToDefault(username,b):
-    salt.modules.reg.set_value("HKEY_USERS",_getUserSID(username)+'\Software\Siber Systems\GoodSync','LocalizationFile',b)
+    salt.modules.reg.set_value("HKEY_USERS",_getUserSID(username)+"\Software\Siber Systems\GoodSync","LocalizationFile",b)
 
 
 def jobnew(RunasUsername,
@@ -138,58 +138,58 @@ def jobnew(RunasUsername,
     if f1==None or f2==None:
         return "Left folder or right folder is null."
 
-    cmd = ['job-new', str(jobname), '/f1=' + str(f1), '/f2=' + str(f2),
-           '/bad-certs1=yes /bad-certs2=yes /hostbased1=yes /hostbased2=yes']
+    cmd = ["job-new", str(jobname), "/f1=" + str(f1), "/f2=" + str(f2),
+           "/bad-certs1=yes","/bad-certs2=yes","/hostbased1=yes","/hostbased2=yes","/exclude-empty=no","/exclude-hidden=no","/exclude-system=no","/auto-unattended=yes"]
 
     # 只读设定
     if ReadOnlySource==0 or ReadOnlySource==1:
-        cmd.extend(['/readonly-src={0}'.format(ReadOnlySource_List[ReadOnlySource])])
+        cmd.extend(["/readonly-src={0}".format(ReadOnlySource_List[ReadOnlySource])])
 
     # 同步模式
     if Direction>=0 or Direction<=2:
-        cmd.extend(['/dir={0}'.format(Direction_List[Direction])])
+        cmd.extend(["/dir={0}".format(Direction_List[Direction])])
 
     if CleanupOldGenerations == 0 or CleanupOldGenerations == 1:
-        cmd.extend(['/cleanup-old-generations={0}'.format(CleanupOldGenerations_List[CleanupOldGenerations])])
+        cmd.extend(["/cleanup-old-generations={0}".format(CleanupOldGenerations_List[CleanupOldGenerations])])
 
     if CopyCreateTime == 0 or CopyCreateTime == 1:
-        cmd.extend(['/copy-create-time={0}'.format(CopyCreateTime_List[CopyCreateTime])])
+        cmd.extend(["/copy-create-time={0}".format(CopyCreateTime_List[CopyCreateTime])])
 
     if WaitForLocks == 0 or WaitForLocks == 1:
-        cmd.extend(['/wait-for-locks={0}'.format(WaitForLocks_List[WaitForLocks])])
+        cmd.extend(["/wait-for-locks={0}".format(WaitForLocks_List[WaitForLocks])])
         if WaitForLocksMinutes>0:
-            cmd.extend(['/timer-period='+str(WaitForLocksMinutes)])
+            cmd.extend(["/timer-period="+str(WaitForLocksMinutes)])
         else:
-            cmd.extend(['/timer-period=10'])
+            cmd.extend(["/timer-period=10"])
 
     if exclude:
-        cmd.extend(['/exclude="{0}"'.format(exclude)])
+        cmd.extend(["/exclude=\"{0}\"".format(exclude)])
 
     if include:
-        cmd.extend(['/include="{0}"'.format(include)])
+        cmd.extend(["/include=\"{0}\"".format(include)])
 
     if LimitChangesPercent>=0 or LimitChangesPercent<=100:
-        cmd.extend(['/limit-changes={0}'.format(str(LimitChangesPercent))])
+        cmd.extend(["/limit-changes={0}".format(str(LimitChangesPercent))])
 
 
     if OnFileChangeAction>=0 or OnFileChangeAction<=2:
-        cmd.extend(['/on-file-change={0}'.format(OnFileChangeAction_List[OnFileChangeAction])])
+        cmd.extend(["/on-file-change={0}".format(OnFileChangeAction_List[OnFileChangeAction])])
 
     if OnTimerAction>=0 or OnTimerAction<=2:
-        cmd.extend(['/on-timer={0}'.format(OnTimerAction_List[OnTimerAction])])
+        cmd.extend(["/on-timer={0}".format(OnTimerAction_List[OnTimerAction])])
         if (OnTimerAction==0 or OnTimerAction==1) and TimerIntervalMinutes>0:
-            cmd.extend(['/timer-period='+str(TimerIntervalMinutes)])
+            cmd.extend(["/timer-period="+str(TimerIntervalMinutes)])
 
     if AutoResolveConflicts>=0 or AutoResolveConflicts<=3:
-        cmd.extend(['/autoresolve={0}'.format(AutoResolveConflicts_List[AutoResolveConflicts])])
+        cmd.extend(["/autoresolve={0}".format(AutoResolveConflicts_List[AutoResolveConflicts])])
 
     if DetectMovesAndRenames == 0:
-        cmd.extend(['/detect=folder-moves=yes /detect-moves=yes'])
+        cmd.extend(["/detect=folder-moves=yes","/detect-moves=yes"])
     elif DetectMovesAndRenames == 1:
-        cmd.extend(['/detect=folder-moves=no /detect-moves=no'])
+        cmd.extend(["/detect=folder-moves=no","/detect-moves=no"])
 
     if UberUnlockedUpload==0 or UberUnlockedUpload==1:
-        cmd.extend(['/uber-unlocked={0}'.format(UberUnlockedUpload_List[UberUnlockedUpload])])
+        cmd.extend(["/uber-unlocked={0}".format(UberUnlockedUpload_List[UberUnlockedUpload])])
 
     if Option>=0 or Option<=2:
         cmd.extend([Option_List[Option]])
