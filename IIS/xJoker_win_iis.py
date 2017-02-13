@@ -13,6 +13,7 @@ from __future__ import absolute_import
 # Import salt libs
 import salt.utils
 import os
+import subprocess
 from salt.exceptions import SaltInvocationError
 
 import logging
@@ -234,7 +235,12 @@ def create_site(
     pscmd = []
 
     # Get Site id
-    site_id=_srvmgr("dir iis:\sites | foreach {$_.id} | sort -Descending | select -first 1")
+    site_id=int(_srvmgr("dir iis:\sites | foreach {$_.id} | sort -Descending | select -first 1"))+1
+
+    # 如果站点目录不存在则创建
+    if not os.path.exists(sourcepath):
+        os.mkdir(sourcepath)
+
 
     # 判断站点名称是否已经存在
     if name in current_sites:
@@ -267,13 +273,21 @@ def create_site(
     # Create site powershell command
     # New-Website -Name "$name" -PhysicalPath "$physicalPath" -ApplicationPool "$applicationPool" -Port "$port" -IPAddress "$IPAddress" -HostHeader "$hostName" -id $id
 
+    if not os.path.exists(sourcepath):
+        os.makedirs(sourcepath)
+        _LOG.info("create dir Done")
+
+    # 设置目录权限
+    cmd_ow = 'cacls "' + sourcepath + '" /g "iis apppool\{0}":f /t /e /c'.format(name)
+    subprocess.Popen(cmd_ow, stdout=subprocess.PIPE, shell=True)
+
     pscmd.append("New-Website -Name '{0}'".format(name))
     pscmd.append(" -PhysicalPath '{0}'".format(sourcepath))
     pscmd.append(" -ApplicationPool '{0}'".format(apppool))
     pscmd.append(" -Port '{0}'".format(port))
     pscmd.append(" -IPAddress '{0}'".format(ipaddress))
     pscmd.append(" -HostHeader '{0}'".format(hostheader))
-    pscmd.append(" -id '{0}'".format(site_id))
+    pscmd.append(" -id '{0}'".format(str(site_id)))
 
     command = ''.join(pscmd)
     return _srvmgr(command)
